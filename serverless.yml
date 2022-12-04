@@ -2,22 +2,30 @@ service: tweet-notifier
 
 frameworkVersion: '3'
 
-secrets: ${file(./secrets.yml)}
+custom: ${file(./secrets.yml)}
 
 provider:
   name: aws
   runtime: nodejs14.x
   environment:
-    APP_ACCOUNT_ID: ${self:secrets.accountId}
-    APP_QUERY: ${self:secrets.query}
-    APP_DISCORD_WEBHOOK: ${self:secrets.discordWebhook}
-    APP_TWITTER_BEARER_TOKEN: ${self:secrets.twitterBearerToken}
+    APP_ACCOUNT_ID: ${self:custom.accountId}
+    APP_QUERY: ${self:custom.query}
+    APP_DISCORD_WEBHOOK: ${self:custom.discordWebhook}
+    APP_TWITTER_BEARER_TOKEN: ${self:custom.twitterBearerToken}
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - 'ssm:GetParameter'
+            - 'ssm:PutParameter'
+          Resource: 'arn:aws:ssm:${aws:region}:${aws:accountId}:*'
 
 functions:
   handler:
     handler: handler.run
     events:
-      - schedule: ${secrets.schedule}
+      - schedule: ${self:custom.schedule}
 
 	
 plugins:

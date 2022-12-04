@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { SSMClient, PutParameterCommand, GetParameterCommand } from "@aws-sdk/client-ssm";
+import { SSMClient, PutParameterCommand, GetParameterCommand } from "@aws-sdk/client-ssm"
 
 interface Tweet {
   id: string
@@ -17,12 +17,12 @@ type TweetSearchResponse = {
 }
 
 export async function run() {
-  const response = await getMatchingTweets();
-  const tweets = response.data;
+  const response = await getMatchingTweets()
+  const tweets = response.data
 
   if (!tweets) {
-    console.log('no new tweets found');
-    return;
+    console.log('no new tweets found')
+    return
   }
 
   for (const tweet of tweets) {
@@ -34,21 +34,22 @@ export async function run() {
     console.log(`updating parameter store with ${response.meta.newest_id} as the newest tweet`)
     await updateParameterStore(response.meta.newest_id)
   }
-};
+}
 
 async function getMatchingTweets(): Promise<TweetSearchResponse> {
   const url = 'https://api.twitter.com/2/tweets/search/recent'
+  const query = `from:${process.env.APP_ACCOUNT_ID} ${process.env.APP_QUERY}`
   const response = await axios.get(url, {
     params: {
-      query: `from:${process.env.APP_ACCOUNT_ID} ${process.env.query}`,
-      since_id: await getLatestIdFromParameterStore(),
+      query,
+      since_id: (await getLatestIdFromParameterStore())
     },
     headers: {
       Authorization: `Bearer ${process.env.APP_TWITTER_BEARER_TOKEN}`
     }
   })
-  const data: TweetSearchResponse = response.data;
-  return data;
+  const data: TweetSearchResponse = response.data
+  return data
 }
 
 async function postMatchingTweetToDiscord(tweet: Tweet) {
@@ -62,24 +63,34 @@ async function postMatchingTweetToDiscord(tweet: Tweet) {
 }
 
 async function updateParameterStore(newestId: string): Promise<void> {
-  const client = new SSMClient({ region: process.env.AWS_REGION });
+  const client = new SSMClient({ region: process.env.AWS_REGION })
   const command = new PutParameterCommand({
     Name: getParameterName(),
     Value: newestId,
+    Type: 'String',
+    Overwrite: true,
   })
-  await client.send(command);
+  await client.send(command)
 }
 
 async function getLatestIdFromParameterStore(): Promise<string | undefined> {
-  const client = new SSMClient({ region: process.env.AWS_REGION });
+  const client = new SSMClient({ region: process.env.AWS_REGION })
   const command = new GetParameterCommand({
     Name: getParameterName(),
   })
-  const response = await client.send(command);
-
-  return response.Parameter?.Value;
+  try {
+    const response = await client.send(command)
+    return response.Parameter?.Value
+  } catch (e) {
+    if (e instanceof Error) {
+      if (e.toString().includes('ParameterNotFound')) {
+        return undefined;
+      }
+      throw e;
+    }
+  }
 }
 
 function getParameterName() {
-  return `tweet-notifier/latest-${process.env.APP_ACCOUNT_ID}-tweet`;
+  return `tweet-notifier-latest-${process.env.APP_ACCOUNT_ID}-tweet`
 }
