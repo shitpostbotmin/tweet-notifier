@@ -7,6 +7,11 @@ secrets: ${file(./secrets.yml)}
 provider:
   name: aws
   runtime: nodejs14.x
+  environment:
+    APP_ACCOUNT_ID: ${self:secrets.accountId}
+    APP_QUERY: ${self:secrets.query}
+    APP_DISCORD_WEBHOOK: ${self:secrets.discordWebhook}
+    APP_TWITTER_BEARER_TOKEN: ${self:secrets.twitterBearerToken}
 
 functions:
   handler:
