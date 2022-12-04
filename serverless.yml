@@ -1,0 +1,19 @@
+service: tweet-notifier
+
+frameworkVersion: '3'
+
+secrets: ${file(./secrets.yml)}
+
+provider:
+  name: aws
+  runtime: nodejs14.x
+
+functions:
+  handler:
+    handler: handler.run
+    events:
+      - schedule: ${secrets.schedule}
+
+	
+plugins:
+  - serverless-plugin-typescript
